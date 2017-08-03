@@ -1,0 +1,113 @@
+'''
+Copyright (c) 2017, Opsani
+All rights reserved.
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions are met:
+
+1. Redistributions of source code must retain the above copyright notice,
+   this list of conditions and the following disclaimer.
+
+2. Redistributions in binary form must reproduce the above copyright notice,
+   this list of conditions and the following disclaimer in the documentation
+   and/or other materials provided with the distribution.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
+LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+POSSIBILITY OF SUCH DAMAGE.
+
+License template: http://opensource.org/licenses/BSD-2-Clause
+                  (as accessed on June 2, 2015)
+
+probe-redis - probe for assessing redis instance(s) over a network
+'''
+from __future__   import print_function
+from probe_common import skpp
+from probe_common import probe
+
+import redis
+import sys
+
+# === definitions
+
+_dflt_timeout    = 120          # default action timeout in seconds
+_dflt_port       = 6379         # default port
+_dflt_database   = 0            # default db
+_dflt_password   = None         # default password
+_connect_timeout = 2            # socket_connect timeout in seconds
+
+# === operations
+
+def _redis_access(host, auth_failure_ok=False, port=_dflt_port,
+    database=_dflt_database, password=_dflt_password, **dummy):
+    '''
+    Connect to and ping redis.  To verify only that the redis service is up,
+    pass auth_failure_ok=True.
+    '''
+    try:
+        r = redis.StrictRedis(host=host, port=port, db=database, password=password,
+            socket_connect_timeout=_connect_timeout)
+        r.ping()
+    except (redis.exceptions.AuthenticationError, redis.exceptions.ResponseError) as e:
+        # redis raises a ResponseError if auth is sent but redis is not password
+        # protected, or if an invalid DB index is sent for the value of database
+        if auth_failure_ok:
+            return
+        raise probe.UserValidationError('failed to verify redis at {}:{}: {}'.format(host, port, e))
+    except Exception as e:
+        raise probe.UserError('failed to verify redis at {}:{}: {}'.format(host, port, e))
+
+# === action handlers
+
+def _service_up(project, inst=[], **args):
+    '''
+    Ping each instance:  no-op if no instances, fail on first failure.  Do NOT
+    fail on authentication failure.
+    '''
+    for i in inst:
+        probe.wait_retry_op(args.get('timeout', _dflt_timeout),
+            lambda: _redis_access(host=probe.extract_ip(i), auth_failure_ok=True, **args))
+    return
+
+def _check_access(project, inst=[], **args):
+    '''
+    Ping each instance:  no-op if no instances, fail on first failure, including
+    authentication failure.
+    '''
+    for i in inst:
+        probe.wait_retry_op(args.get('timeout', _dflt_timeout),
+            lambda: _redis_access(host=probe.extract_ip(i), **args))
+    return
+
+# === Skopos plugin action wrappers
+
+@skpp.action
+def service_up(**args):
+    try:
+        _service_up(**args)
+    except (probe.UserError, probe.UserValidationError) as e:
+        print('Error:', str(e), file=sys.stderr)
+        sys.exit(1)
+    return args
+
+@skpp.action
+def check_access(**args):
+    try:
+        _check_access(**args)
+    except (probe.UserError, probe.UserValidationError) as e:
+        print('Error:', str(e), file=sys.stderr)
+        sys.exit(1)
+    return args
+
+# === Main
+
+if __name__ == "__main__":
+    skpp.run('probe-redis', globals())
