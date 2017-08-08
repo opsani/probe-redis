@@ -11,7 +11,7 @@ These actions support the following arguments:
 * `port` - port number (default `6379`)
 * `password` - password (default `None`)
 * `database` - database index (default `0`)
-* `timeout` - operation timeout *per service instance*, in seconds (default `120`).  This is how long to keep retrying if the redis service does not respond.
+* `timeout` - operation timeout *per service instance*, in seconds (default `30`).  This is how long to keep retrying if the redis service does not respond.
 
 ## examples
 
@@ -32,7 +32,7 @@ quality_gates:
                 image: opsani/probe-redis:v1
                 action: check_access
                 label: "check redis access on alternate port with timeout"
-                arguments: { port: 10000, timeout: 30 }
+                arguments: { port: 10000, timeout: 15 }
             - probe:
                 image: opsani/probe-redis:v1
                 action: check_access
