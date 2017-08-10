@@ -13,6 +13,8 @@ These actions support the following arguments:
 * `database` - database index (default `0`)
 * `timeout` - operation timeout *per service instance*, in seconds (default `30`).  This is how long to keep retrying if the redis service does not respond.
 
+Docker Hub repository:  <https://hub.docker.com/r/opsani/probe-redis/>
+
 ## examples
 
 Here are a few examples in the form of quality gates specified in a Skopos TED file (target environment descriptor).  Quality gates associate probe executions to one or more component images.  During application deployment Skopos executes the specified probes to assess components deployed with matching images.
@@ -25,16 +27,16 @@ quality_gates:
         steps:
 
             # verify redis service is up (default action service_up)
-            - probe: opsani/probe-redis:v1
+            - probe: opsani/probe-redis
 
             # verify redis access
             - probe:
-                image: opsani/probe-redis:v1
+                image: opsani/probe-redis
                 action: check_access
                 label: "check redis access on alternate port with timeout"
                 arguments: { port: 10000, timeout: 15 }
             - probe:
-                image: opsani/probe-redis:v1
+                image: opsani/probe-redis
                 action: check_access
                 label: "check redis access with password"
                 arguments: { password: "my_password" }
