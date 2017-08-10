@@ -39,5 +39,5 @@ quality_gates:
                 image: opsani/probe-redis
                 action: check_access
                 label: "check redis access with password"
-                arguments: { password: "my_password" }
+                arguments: { password: "${my_password}" }
 ```
