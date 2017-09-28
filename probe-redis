@@ -96,7 +96,7 @@ def service_up(**args):
     except (probe.UserError, probe.UserValidationError) as e:
         print('Error:', str(e), file=sys.stderr)
         sys.exit(1)
-    return args
+    return {}
 
 @skpp.action
 def check_access(**args):
@@ -105,7 +105,7 @@ def check_access(**args):
     except (probe.UserError, probe.UserValidationError) as e:
         print('Error:', str(e), file=sys.stderr)
         sys.exit(1)
-    return args
+    return {}
 
 # === Main
 
